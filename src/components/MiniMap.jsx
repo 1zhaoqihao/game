@@ -19,10 +19,12 @@ function getNodeIcon(index) {
   return ICONS.swords
 }
 
-export function MiniMap({ phase, encounterIndex, mapChoices = [], runComplete = false }) {
+export function MiniMap({ phase, encounterIndex, pendingNextIndex = null, mapChoices = [], runComplete = false }) {
+  const nonCombatPhase = ["event", "shop", "rest", "chest"].includes(phase)
+  const activeIndex = nonCombatPhase && pendingNextIndex != null ? pendingNextIndex : encounterIndex
   const selectableIndexes = new Set(phase === "map" ? mapChoices.map((choice) => choice.nextIndex) : [])
-  const completedIndex = runComplete ? ENCOUNTERS.length - 1 : phase === "map" || phase === "reward" ? encounterIndex : encounterIndex - 1
-  const progressValue = runComplete ? ENCOUNTERS.length : Math.min(ENCOUNTERS.length, encounterIndex + 1)
+  const completedIndex = runComplete ? ENCOUNTERS.length - 1 : phase === "combat" ? encounterIndex - 1 : encounterIndex
+  const progressValue = runComplete ? ENCOUNTERS.length : Math.min(ENCOUNTERS.length, activeIndex + 1)
   const progressText = `${progressValue}/${ENCOUNTERS.length}`
 
   return (
@@ -42,10 +44,13 @@ export function MiniMap({ phase, encounterIndex, mapChoices = [], runComplete = 
         {ENCOUNTERS.map((encounter, index) => {
           const isCompleted = index <= completedIndex && !runComplete ? true : runComplete
           const isCurrent = !runComplete && phase === "combat" && index === encounterIndex
+          const isPending = !runComplete && nonCombatPhase && index === activeIndex
           const isSelectable = selectableIndexes.has(index)
-          const isFuture = !isCompleted && !isCurrent && !isSelectable
+          const isFuture = !isCompleted && !isCurrent && !isPending && !isSelectable
           const nodeClass = isCurrent
             ? "border-slate-900 bg-slate-900 text-white shadow-md"
+            : isPending
+              ? "border-sky-500 bg-sky-50 text-sky-900 shadow-sm ring-2 ring-sky-200"
             : isSelectable
               ? "border-amber-500 bg-amber-50 text-amber-900 shadow-sm ring-2 ring-amber-200"
               : isCompleted
@@ -69,6 +74,7 @@ export function MiniMap({ phase, encounterIndex, mapChoices = [], runComplete = 
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {isCompleted && <span className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-semibold">已完成</span>}
                   {isCurrent && <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold">当前战斗</span>}
+                  {isPending && <span className="rounded-full bg-sky-200 px-2 py-0.5 text-xs font-semibold text-sky-900">下一战</span>}
                   {isSelectable && <span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-900">可选</span>}
                   {isFuture && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">后续节点</span>}
                 </div>

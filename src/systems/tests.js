@@ -43,6 +43,8 @@ export function runSelfTests() {
   add("地图会提供事件节点", generateMapChoices(0).some((choice) => choice.type === "event"))
   add("地图会提供商店节点", generateMapChoices(1).some((choice) => choice.type === "shop"))
   add("地图会提供宝箱节点", generateMapChoices(2).some((choice) => choice.type === "chest"))
+  const eventChoice = generateMapChoices(0).find((choice) => choice.type === "event")
+  add("非战斗节点会记录下一战进度", eventChoice.nextIndex === 1)
 
   const shop = generateShopInventory()
   add("商店生成卡牌和遗物库存", shop.cards.length === 4 && shop.relics.length === 2 && shop.cards.every((card) => card.price > 0))

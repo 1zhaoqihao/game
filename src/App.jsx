@@ -36,7 +36,9 @@ export default function App() {
   const allTestsPassed = tests.every((test) => test.passed)
   const enemyHpPct = Math.max(0, Math.min(100, (state.enemy.hp / state.enemy.maxHp) * 100))
   const playerHpPct = Math.max(0, Math.min(100, (state.player.hp / state.player.maxHp) * 100))
-  const currentEncounter = ENCOUNTERS[Math.min(state.encounterIndex, ENCOUNTERS.length - 1)]
+  const nonCombatNode = ["event", "shop", "rest", "chest"].includes(state.phase)
+  const shownEncounterIndex = nonCombatNode && state.pendingNextIndex != null ? state.pendingNextIndex : state.encounterIndex
+  const currentEncounter = ENCOUNTERS[Math.min(shownEncounterIndex, ENCOUNTERS.length - 1)]
 
   useEffect(() => {
     saveRun(state)
@@ -434,6 +436,7 @@ export default function App() {
         <MiniMap
           phase={state.phase}
           encounterIndex={state.encounterIndex}
+          pendingNextIndex={state.pendingNextIndex}
           mapChoices={state.mapChoices}
           runComplete={state.runComplete}
         />
