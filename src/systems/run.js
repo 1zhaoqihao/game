@@ -43,6 +43,7 @@ export function createRun(characterId = "pyro_swordsman") {
     hand: deck.slice(0, 5),
     discard: [],
     exhausted: [],
+    summons: [],
     rewards: [],
     rewardRelic: null,
     rewardGold: 0,

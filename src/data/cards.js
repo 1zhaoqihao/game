@@ -26,6 +26,8 @@ export const REWARD_CARD_POOL = [
   { id: "frost_deflect", name: "霜盾反射", cost: 1, type: "技能", element: "cryo", damage: 3, block: 9, apply: "cryo", rarity: "非凡", text: "造成 3 冰伤，获得 9 护盾，并附着冰。" },
   { id: "expose_weakness", name: "破绽标记", cost: 1, type: "技能", element: "physical", rarity: "非凡", text: "给予敌人 2 回合易伤。", effects: [{ type: "apply_status", status: "vulnerable", turns: 2, label: "易伤" }] },
   { id: "mist_veil", name: "雾潮帷幕", cost: 1, type: "技能", element: "hydro", block: 6, rarity: "普通", text: "获得 6 护盾，给予敌人 2 回合虚弱。", effects: [{ type: "gain_block", amount: 6 }, { type: "apply_status", status: "weak", turns: 2, label: "虚弱" }] },
+  { id: "fire_raven", name: "火鸦", cost: 2, type: "召唤", element: "pyro", rarity: "稀有", text: "召唤火鸦，接下来 3 回合开始时造成 5 点火伤。", effects: [{ type: "summon", id: "fire_raven", name: "火鸦", element: "pyro", damage: 5, turns: 3 }] },
+  { id: "water_sprite", name: "水灵", cost: 2, type: "召唤", element: "hydro", rarity: "稀有", text: "召唤水灵，接下来 3 回合开始时造成 4 点水伤。", effects: [{ type: "summon", id: "water_sprite", name: "水灵", element: "hydro", damage: 4, turns: 3 }] },
 ]
 
 export const ALL_CARDS = [...STARTER_DECK, ...REWARD_CARD_POOL]

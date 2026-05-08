@@ -4,6 +4,7 @@ import { drawCards } from './draw.js'
 import { triggerRelics } from './relics.js'
 import { triggerCharacterPassive } from './characters.js'
 import { addStatus, hasStatus } from './status.js'
+import { addSummon } from './summons.js'
 
 export function getCardEffects(card) {
   if (Array.isArray(card.effects) && card.effects.length > 0) return card.effects
@@ -164,6 +165,11 @@ export function resolveCardEffects(state, card) {
         next = { ...next, enemy: addStatus(next.enemy, effect.status, effect.turns ?? 1) }
       }
       logs.push(`${target === "player" ? "玩家" : "敌人"}获得 ${effect.turns ?? 1} 回合${effect.label ?? effect.status}。`)
+    }
+
+    if (effect.type === "summon") {
+      next = addSummon(next, effect)
+      logs.push(`召唤 ${effect.name}，持续 ${effect.turns} 回合。`)
     }
   }
 

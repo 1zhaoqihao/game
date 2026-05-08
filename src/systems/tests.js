@@ -9,6 +9,7 @@ import { createRun } from './run.js'
 import { CHARACTERS } from '../data/characters.js'
 import { hasSavedRun, loadRun, saveRun } from './save.js'
 import { addStatus, tickStatuses } from './status.js'
+import { triggerSummons } from './summons.js'
 
 export function runSelfTests() {
   const tests = []
@@ -147,6 +148,23 @@ export function runSelfTests() {
   add("虚弱会降低敌人攻击伤害", weakAttack.state.player.hp === 14)
 
   add("状态会按回合衰减", Object.keys(tickStatuses(addStatus({ statuses: {} }, "weak", 2)).statuses).length === 1)
+
+  const summonedState = resolveCardEffects({
+    maxEnergy: 3,
+    energy: 2,
+    player: { hp: 20, maxHp: 20, block: 0, statuses: {} },
+    enemy: { hp: 20, maxHp: 20, block: 0, aura: null, frozen: 0, statuses: {} },
+    hand: [],
+    drawPile: [],
+    discard: [],
+    summons: [],
+    log: [],
+    relics: [],
+  }, { id: "summon_test", name: "召唤测试", cost: 2, element: "pyro", effects: [{ type: "summon", id: "fire_raven", name: "火鸦", element: "pyro", damage: 5, turns: 3 }] })
+  add("召唤效果会生成召唤物", summonedState.state.summons.length === 1)
+
+  const summonTick = triggerSummons(summonedState.state)
+  add("召唤物会造成伤害并减少持续回合", summonTick.state.enemy.hp === 15 && summonTick.state.summons[0].turns === 2)
 
   return tests
 }

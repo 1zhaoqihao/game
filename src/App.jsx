@@ -16,6 +16,7 @@ import { triggerCharacterPassive } from './systems/characters.js'
 import { clearSavedRun, hasSavedRun, loadRun, saveRun } from './systems/save.js'
 import { statusEntries, tickStatuses } from './systems/status.js'
 import { STATUSES } from './data/statuses.js'
+import { triggerSummons } from './systems/summons.js'
 import { Button, Panel, Badge, TinyIcon } from './components/ui.jsx'
 import { CardView } from './components/CardView.jsx'
 import { ElementBadge, StatPill } from './components/Status.jsx'
@@ -120,6 +121,8 @@ export default function App() {
 
       next = drawCards(next, 5)
       next.log = [...next.log, `第 ${next.turn} 回合开始，抽 5 张牌。`].slice(-22)
+      const summoned = triggerSummons(next)
+      next = { ...summoned.state, log: [...summoned.state.log, ...summoned.logs].slice(-22) }
       const triggered = triggerRelics(next, { type: "onTurnStart", enemyAura: next.enemy.aura })
       next = { ...triggered.state, log: [...triggered.state.log, ...triggered.logs].slice(-22) }
       return next
@@ -255,6 +258,7 @@ export default function App() {
       hand: deck.slice(0, 5),
       discard: [],
       exhausted: [],
+      summons: [],
       mapChoices: [],
       currentEvent: null,
       pendingNextIndex: null,
@@ -639,6 +643,23 @@ export default function App() {
                     </div>
                   </div>
                 </Panel>
+
+                {state.summons.length > 0 && (
+                  <Panel className="p-5">
+                    <h2 className="font-bold">召唤物</h2>
+                    <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                      {state.summons.map((summon) => {
+                        const meta = ELEMENTS[summon.element] || ELEMENTS.physical
+                        return (
+                          <div key={summon.uid} className="rounded-xl border border-slate-200 bg-white p-3 text-sm shadow-sm">
+                            <div className="font-bold">{meta.icon} {summon.name}</div>
+                            <div className="mt-1 text-slate-600">伤害 {summon.damage} · 剩余 {summon.turns} 回合</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </Panel>
+                )}
 
                 <section className="space-y-3">
                   <div className="flex items-center justify-between">
