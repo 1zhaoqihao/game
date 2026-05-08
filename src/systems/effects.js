@@ -3,6 +3,7 @@ import { reaction } from './reaction.js'
 import { drawCards } from './draw.js'
 import { triggerRelics } from './relics.js'
 import { triggerCharacterPassive } from './characters.js'
+import { addStatus, hasStatus } from './status.js'
 
 export function getCardEffects(card) {
   if (Array.isArray(card.effects) && card.effects.length > 0) return card.effects
@@ -86,7 +87,8 @@ function applyDamageEffect(state, effect, card, logs) {
     if (enemy.hp <= 0) break
 
     const reactionResult = reaction(enemy.aura, element)
-    const rawDamage = Math.round(effect.amount * reactionResult.multiplier + reactionResult.bonusDamage)
+    const statusMultiplier = hasStatus(enemy, "vulnerable") ? 1.5 : 1
+    const rawDamage = Math.round((effect.amount * reactionResult.multiplier + reactionResult.bonusDamage) * statusMultiplier)
     const blocked = Math.min(enemy.block ?? 0, rawDamage)
     const dmg = rawDamage - blocked
     enemy.block = Math.max(0, (enemy.block ?? 0) - blocked)
@@ -152,6 +154,16 @@ export function resolveCardEffects(state, card) {
 
     if (effect.type === "apply_element") {
       next = applyElementOnly(next, effect.element, card, logs)
+    }
+
+    if (effect.type === "apply_status") {
+      const target = effect.target ?? "enemy"
+      if (target === "player") {
+        next = { ...next, player: addStatus(next.player, effect.status, effect.turns ?? 1) }
+      } else {
+        next = { ...next, enemy: addStatus(next.enemy, effect.status, effect.turns ?? 1) }
+      }
+      logs.push(`${target === "player" ? "玩家" : "敌人"}获得 ${effect.turns ?? 1} 回合${effect.label ?? effect.status}。`)
     }
   }
 

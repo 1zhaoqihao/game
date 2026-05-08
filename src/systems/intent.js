@@ -1,4 +1,5 @@
 import { ENCOUNTERS } from '../data/encounters.js'
+import { addStatus, hasStatus, tickStatuses } from './status.js'
 
 export function chooseEnemyIntent(encounterIndex, turn) {
   const encounter = ENCOUNTERS[Math.min(encounterIndex, ENCOUNTERS.length - 1)]
@@ -9,12 +10,15 @@ export function chooseEnemyIntent(encounterIndex, turn) {
     type: move.type,
     value: move.value ?? 0,
     block: move.block ?? 0,
+    status: move.status ?? null,
+    turns: move.turns ?? 0,
   }
 }
 
 export function describeIntent(intent) {
   if (intent.type === "block") return `防御 ${intent.value}`
   if (intent.type === "attack_block") return `攻击 ${intent.value} / 防御 ${intent.block}`
+  if (intent.type === "status") return `施加 ${intent.status}`
   return `攻击 ${intent.value}`
 }
 
@@ -31,7 +35,7 @@ export function resolveEnemyIntent(state) {
 
   const intent = enemy.intent
   if (intent.type === "attack" || intent.type === "attack_block") {
-    const raw = intent.value
+    const raw = Math.max(0, Math.round(intent.value * (hasStatus(enemy, "weak") ? 0.75 : 1)))
     const absorbed = Math.min(player.block, raw)
     player.block -= absorbed
     const taken = raw - absorbed
@@ -49,5 +53,10 @@ export function resolveEnemyIntent(state) {
     logs.push(`敌人追加获得 ${intent.block} 点护盾。`)
   }
 
-  return { state: { ...state, player, enemy }, logs }
+  if (intent.type === "status") {
+    player = addStatus(player, intent.status, intent.turns || 1)
+    logs.push(`敌人施加 ${intent.turns || 1} 回合${intent.status}。`)
+  }
+
+  return { state: { ...state, player, enemy: tickStatuses(enemy) }, logs }
 }

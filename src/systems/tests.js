@@ -8,6 +8,7 @@ import { chooseEnemyIntent, resolveEnemyIntent } from './intent.js'
 import { createRun } from './run.js'
 import { CHARACTERS } from '../data/characters.js'
 import { hasSavedRun, loadRun, saveRun } from './save.js'
+import { addStatus, tickStatuses } from './status.js'
 
 export function runSelfTests() {
   const tests = []
@@ -89,7 +90,7 @@ export function runSelfTests() {
   const resolved = resolveCardEffects(effectState, effectCard)
   add("数据驱动 effects 卡牌可直接结算", resolved.state.player.block === 2 && resolved.state.enemy.hp === 10)
 
-  add("敌人意图会按回合轮换", chooseEnemyIntent(0, 2).type === "block")
+  add("敌人意图会按回合轮换", chooseEnemyIntent(0, 2).type === "status")
 
   const enemyAction = resolveEnemyIntent({
     player: { hp: 20, maxHp: 20, block: 3 },
@@ -125,6 +126,27 @@ export function runSelfTests() {
   add("角色被动可响应元素反应", passiveResolved.state.hand.length === 1)
 
   add("非浏览器环境下存档模块安全降级", saveRun({}) === false && loadRun() === null && hasSavedRun() === false)
+
+  const vulnerableHit = resolveCardEffects({
+    maxEnergy: 3,
+    energy: 2,
+    player: { hp: 20, maxHp: 20, block: 0, statuses: {} },
+    enemy: { hp: 20, maxHp: 20, block: 0, aura: null, frozen: 0, statuses: { vulnerable: 1 } },
+    hand: [],
+    drawPile: [],
+    discard: [],
+    log: [],
+    relics: [],
+  }, { id: "vuln_hit", name: "易伤测试", cost: 1, element: "physical", effects: [{ type: "deal_damage", amount: 6, element: "physical" }] })
+  add("易伤会提高敌人受到的伤害", vulnerableHit.state.enemy.hp === 11)
+
+  const weakAttack = resolveEnemyIntent({
+    player: { hp: 20, maxHp: 20, block: 0, statuses: {} },
+    enemy: { block: 0, frozen: 0, statuses: { weak: 1 }, intent: { type: "attack", value: 8 } },
+  })
+  add("虚弱会降低敌人攻击伤害", weakAttack.state.player.hp === 14)
+
+  add("状态会按回合衰减", Object.keys(tickStatuses(addStatus({ statuses: {} }, "weak", 2)).statuses).length === 1)
 
   return tests
 }

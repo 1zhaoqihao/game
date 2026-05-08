@@ -16,6 +16,7 @@ export function buildEnemy(index) {
     block: 0,
     aura: null,
     frozen: 0,
+    statuses: {},
     intent: chooseEnemyIntent(index, 1),
   }
 }
@@ -35,7 +36,7 @@ export function createRun(characterId = "pyro_swordsman") {
     gold: 0,
     character,
     passiveMemory: { turn: 1, ids: [] },
-    player: { hp: character.maxHp, maxHp: character.maxHp, block: 0, energyBurst: 0 },
+    player: { hp: character.maxHp, maxHp: character.maxHp, block: 0, energyBurst: 0, statuses: {} },
     enemy: buildEnemy(0),
     masterDeck,
     drawPile: deck.slice(5),

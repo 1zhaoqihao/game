@@ -14,6 +14,8 @@ import { resolveCardEffects } from './systems/effects.js'
 import { chooseEnemyIntent, describeIntent, resolveEnemyIntent } from './systems/intent.js'
 import { triggerCharacterPassive } from './systems/characters.js'
 import { clearSavedRun, hasSavedRun, loadRun, saveRun } from './systems/save.js'
+import { statusEntries, tickStatuses } from './systems/status.js'
+import { STATUSES } from './data/statuses.js'
 import { Button, Panel, Badge, TinyIcon } from './components/ui.jsx'
 import { CardView } from './components/CardView.jsx'
 import { ElementBadge, StatPill } from './components/Status.jsx'
@@ -108,7 +110,7 @@ export default function App() {
         ...s,
         turn: s.turn + 1,
         energy: s.maxEnergy,
-        player: { ...player, block: 0 },
+        player: { ...tickStatuses(player), block: 0 },
         enemy: { ...enemy, intent: chooseEnemyIntent(s.encounterIndex, s.turn + 1) },
         hand: [],
         discard: [...s.discard, ...s.hand],
@@ -480,6 +482,11 @@ export default function App() {
                 </div>
                 <Button onClick={endTurn} disabled={state.phase !== "combat" || state.won || state.lost}>结束回合</Button>
               </div>
+              {statusEntries(state.player).length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {statusEntries(state.player).map(([statusId, turns]) => <Badge key={statusId} className={STATUSES[statusId]?.cls ?? "border-slate-300 bg-white text-slate-700"}>{STATUSES[statusId]?.name ?? statusId} {turns}</Badge>)}
+                </div>
+              )}
               <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-slate-200">
                 <div className="h-full bg-slate-800 transition-all" style={{ width: `${playerHpPct}%` }} />
               </div>
@@ -619,6 +626,7 @@ export default function App() {
                         <h2 className="text-xl font-bold">{state.enemy.name}</h2>
                         <ElementBadge element={state.enemy.aura} />
                         {state.enemy.frozen > 0 && <Badge className="border-cyan-600 bg-cyan-600 text-white">冻结</Badge>}
+                        {statusEntries(state.enemy).map(([statusId, turns]) => <Badge key={statusId} className={STATUSES[statusId]?.cls ?? "border-slate-300 bg-white text-slate-700"}>{STATUSES[statusId]?.name ?? statusId} {turns}</Badge>)}
                       </div>
                       <div className="h-4 w-72 max-w-full overflow-hidden rounded-full bg-slate-200">
                         <div className="h-full bg-slate-800 transition-all" style={{ width: `${enemyHpPct}%` }} />

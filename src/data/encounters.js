@@ -7,8 +7,8 @@ export const ENCOUNTERS = [
     floorLabel: "第 1 战",
     moves: [
       { type: "attack", value: 8 },
+      { type: "status", status: "weak", turns: 1 },
       { type: "block", value: 5 },
-      { type: "attack", value: 6 },
     ],
   },
   {
@@ -20,6 +20,7 @@ export const ENCOUNTERS = [
     moves: [
       { type: "attack", value: 11 },
       { type: "attack_block", value: 8, block: 6 },
+      { type: "status", status: "vulnerable", turns: 1 },
       { type: "attack", value: 14 },
     ],
   },
@@ -32,6 +33,7 @@ export const ENCOUNTERS = [
     moves: [
       { type: "attack", value: 14 },
       { type: "block", value: 10 },
+      { type: "status", status: "weak", turns: 2 },
       { type: "attack_block", value: 12, block: 8 },
     ],
   },
@@ -44,6 +46,7 @@ export const ENCOUNTERS = [
     moves: [
       { type: "attack", value: 17 },
       { type: "block", value: 14 },
+      { type: "status", status: "vulnerable", turns: 2 },
       { type: "attack_block", value: 13, block: 10 },
       { type: "attack", value: 22 },
     ],

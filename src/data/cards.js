@@ -24,6 +24,8 @@ export const REWARD_CARD_POOL = [
   { id: "quick_draw", name: "元素观测", cost: 0, type: "技能", element: "physical", damage: 0, block: 0, draw: 2, rarity: "稀有", text: "抽 2 张牌。" },
   { id: "overload_spark", name: "爆雷火花", cost: 1, type: "攻击", element: "pyro", damage: 6, block: 0, apply: "pyro", rarity: "非凡", text: "造成 6 火伤并附着火。若目标带雷，可触发超载。" },
   { id: "frost_deflect", name: "霜盾反射", cost: 1, type: "技能", element: "cryo", damage: 3, block: 9, apply: "cryo", rarity: "非凡", text: "造成 3 冰伤，获得 9 护盾，并附着冰。" },
+  { id: "expose_weakness", name: "破绽标记", cost: 1, type: "技能", element: "physical", rarity: "非凡", text: "给予敌人 2 回合易伤。", effects: [{ type: "apply_status", status: "vulnerable", turns: 2, label: "易伤" }] },
+  { id: "mist_veil", name: "雾潮帷幕", cost: 1, type: "技能", element: "hydro", block: 6, rarity: "普通", text: "获得 6 护盾，给予敌人 2 回合虚弱。", effects: [{ type: "gain_block", amount: 6 }, { type: "apply_status", status: "weak", turns: 2, label: "虚弱" }] },
 ]
 
 export const ALL_CARDS = [...STARTER_DECK, ...REWARD_CARD_POOL]
