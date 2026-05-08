@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ICONS, ELEMENTS } from './data/constants.js'
 import { ENCOUNTERS } from './data/encounters.js'
 import { EVENT_POOL } from './data/events.js'
@@ -13,6 +13,7 @@ import { triggerRelics } from './systems/relics.js'
 import { resolveCardEffects } from './systems/effects.js'
 import { chooseEnemyIntent, describeIntent, resolveEnemyIntent } from './systems/intent.js'
 import { triggerCharacterPassive } from './systems/characters.js'
+import { clearSavedRun, hasSavedRun, loadRun, saveRun } from './systems/save.js'
 import { Button, Panel, Badge, TinyIcon } from './components/ui.jsx'
 import { CardView } from './components/CardView.jsx'
 import { ElementBadge, StatPill } from './components/Status.jsx'
@@ -25,6 +26,7 @@ export default function App() {
   const [showTests, setShowTests] = useState(false)
   const [showDeck, setShowDeck] = useState(false)
   const [showCharacters, setShowCharacters] = useState(false)
+  const [hasSave, setHasSave] = useState(() => hasSavedRun())
 
   const tests = useMemo(() => runSelfTests(), [])
   const passedCount = tests.filter((test) => test.passed).length
@@ -32,6 +34,11 @@ export default function App() {
   const enemyHpPct = Math.max(0, Math.min(100, (state.enemy.hp / state.enemy.maxHp) * 100))
   const playerHpPct = Math.max(0, Math.min(100, (state.player.hp / state.player.maxHp) * 100))
   const currentEncounter = ENCOUNTERS[Math.min(state.encounterIndex, ENCOUNTERS.length - 1)]
+
+  useEffect(() => {
+    saveRun(state)
+    setHasSave(true)
+  }, [state])
 
   const playCard = (card) => {
     if (!card || state.phase !== "combat" || state.won || state.lost || card.cost > state.energy) return
@@ -219,6 +226,19 @@ export default function App() {
     setSelected(null)
   }
 
+  const loadSavedRun = () => {
+    const saved = loadRun()
+    if (!saved) return
+    setState(saved)
+    setSelected(null)
+  }
+
+  const clearSaveAndReset = () => {
+    clearSavedRun()
+    setHasSave(false)
+    reset()
+  }
+
   const enterCombat = (s, nextIndex, logs, healed = 0) => {
     const deck = shuffle(s.masterDeck.map(makeInstance))
     const nextCombat = {
@@ -372,6 +392,8 @@ export default function App() {
             <Button onClick={() => setShowCharacters((value) => !value)} variant="outline"><TinyIcon name={state.character.element} />{state.character.name}</Button>
             <Button onClick={() => setShowDeck((value) => !value)} variant="outline"><TinyIcon name="card" />卡组 {state.masterDeck.length}</Button>
             <Button onClick={() => setShowTests((value) => !value)} variant="outline"><TinyIcon name={allTestsPassed ? "check" : "fail"} />自检 {passedCount}/{tests.length}</Button>
+            <Button onClick={() => { saveRun(state); setHasSave(true) }} variant="outline"><TinyIcon name="check" />保存</Button>
+            <Button onClick={loadSavedRun} disabled={!hasSave} variant="outline"><TinyIcon name="reset" />读取</Button>
             <Button onClick={reset} variant="outline"><TinyIcon name="reset" />重新开始</Button>
           </div>
         </header>

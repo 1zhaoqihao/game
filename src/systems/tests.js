@@ -7,6 +7,7 @@ import { getCardEffects, resolveCardEffects } from './effects.js'
 import { chooseEnemyIntent, resolveEnemyIntent } from './intent.js'
 import { createRun } from './run.js'
 import { CHARACTERS } from '../data/characters.js'
+import { hasSavedRun, loadRun, saveRun } from './save.js'
 
 export function runSelfTests() {
   const tests = []
@@ -122,6 +123,8 @@ export function runSelfTests() {
   }
   const passiveResolved = resolveCardEffects(pyroPassiveState, { id: "passive_test", name: "被动测试", cost: 1, element: "hydro", effects: [{ type: "deal_damage", amount: 1, element: "hydro", apply: "hydro" }] })
   add("角色被动可响应元素反应", passiveResolved.state.hand.length === 1)
+
+  add("非浏览器环境下存档模块安全降级", saveRun({}) === false && loadRun() === null && hasSavedRun() === false)
 
   return tests
 }
