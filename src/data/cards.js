@@ -25,3 +25,9 @@ export const REWARD_CARD_POOL = [
   { id: "overload_spark", name: "爆雷火花", cost: 1, type: "攻击", element: "pyro", damage: 6, block: 0, apply: "pyro", rarity: "非凡", text: "造成 6 火伤并附着火。若目标带雷，可触发超载。" },
   { id: "frost_deflect", name: "霜盾反射", cost: 1, type: "技能", element: "cryo", damage: 3, block: 9, apply: "cryo", rarity: "非凡", text: "造成 3 冰伤，获得 9 护盾，并附着冰。" },
 ]
+
+export const ALL_CARDS = [...STARTER_DECK, ...REWARD_CARD_POOL]
+
+export function getCardById(id) {
+  return ALL_CARDS.find((card) => card.id === id) ?? STARTER_DECK[0]
+}

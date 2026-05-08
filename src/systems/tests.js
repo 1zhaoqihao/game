@@ -5,6 +5,8 @@ import { generateMapChoices } from './map.js'
 import { triggerRelics } from './relics.js'
 import { getCardEffects, resolveCardEffects } from './effects.js'
 import { chooseEnemyIntent, resolveEnemyIntent } from './intent.js'
+import { createRun } from './run.js'
+import { CHARACTERS } from '../data/characters.js'
 
 export function runSelfTests() {
   const tests = []
@@ -106,6 +108,20 @@ export function runSelfTests() {
     relics: [],
   }, { id: "block_test", name: "破盾测试", cost: 1, element: "physical", effects: [{ type: "deal_damage", amount: 6, element: "physical" }] })
   add("敌人护盾会抵消玩家伤害", blockedDamage.state.enemy.hp === 18 && blockedDamage.state.enemy.block === 0)
+
+  add("角色数据至少提供 3 个原型", CHARACTERS.length >= 3)
+  const cryoRun = createRun("cryo_archer")
+  add("创建 run 会套用角色生命与初始卡组", cryoRun.character.id === "cryo_archer" && cryoRun.player.maxHp === 72 && cryoRun.masterDeck.length === 10)
+
+  const pyroPassiveState = {
+    ...createRun("pyro_swordsman"),
+    hand: [],
+    drawPile: dummyCards.slice(0, 2),
+    discard: [],
+    enemy: { hp: 20, maxHp: 20, block: 0, aura: "pyro", frozen: 0 },
+  }
+  const passiveResolved = resolveCardEffects(pyroPassiveState, { id: "passive_test", name: "被动测试", cost: 1, element: "hydro", effects: [{ type: "deal_damage", amount: 1, element: "hydro", apply: "hydro" }] })
+  add("角色被动可响应元素反应", passiveResolved.state.hand.length === 1)
 
   return tests
 }

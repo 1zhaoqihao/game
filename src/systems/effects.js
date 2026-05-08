@@ -2,6 +2,7 @@ import { ELEMENTS } from '../data/constants.js'
 import { reaction } from './reaction.js'
 import { drawCards } from './draw.js'
 import { triggerRelics } from './relics.js'
+import { triggerCharacterPassive } from './characters.js'
 
 export function getCardEffects(card) {
   if (Array.isArray(card.effects) && card.effects.length > 0) return card.effects
@@ -64,9 +65,11 @@ function applyElementOnly(state, element, card, logs) {
 
   next = { ...next, player, enemy }
   if (reactionResult.name) {
+    const passive = triggerCharacterPassive(next, { type: "onReaction", reaction: reactionResult.name, card, enemyAura: enemy.aura })
+    next = passive.state
     const triggered = triggerRelics(next, { type: "onReaction", reaction: reactionResult.name, card, enemyAura: enemy.aura })
     next = triggered.state
-    logs.push(...triggered.logs)
+    logs.push(...passive.logs, ...triggered.logs)
   }
   return next
 }
@@ -105,11 +108,13 @@ function applyDamageEffect(state, effect, card, logs) {
 
     next = { ...next, player, enemy }
     if (reactionResult.name) {
+      const passive = triggerCharacterPassive(next, { type: "onReaction", reaction: reactionResult.name, card, enemyAura: enemy.aura })
+      next = passive.state
       const triggered = triggerRelics(next, { type: "onReaction", reaction: reactionResult.name, card, enemyAura: enemy.aura })
       next = triggered.state
       player = { ...next.player }
       enemy = { ...next.enemy }
-      logs.push(...triggered.logs)
+      logs.push(...passive.logs, ...triggered.logs)
     }
   }
 

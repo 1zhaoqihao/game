@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { ICONS, ELEMENTS } from './data/constants.js'
 import { ENCOUNTERS } from './data/encounters.js'
 import { EVENT_POOL } from './data/events.js'
+import { CHARACTERS } from './data/characters.js'
 import { makeInstance, shuffle } from './systems/utils.js'
 import { drawCards } from './systems/draw.js'
 import { generateChestReward, generateRewards, generateShopInventory, randomRewardCard, randomRewardRelic } from './systems/reward.js'
@@ -11,6 +12,7 @@ import { runSelfTests } from './systems/tests.js'
 import { triggerRelics } from './systems/relics.js'
 import { resolveCardEffects } from './systems/effects.js'
 import { chooseEnemyIntent, describeIntent, resolveEnemyIntent } from './systems/intent.js'
+import { triggerCharacterPassive } from './systems/characters.js'
 import { Button, Panel, Badge, TinyIcon } from './components/ui.jsx'
 import { CardView } from './components/CardView.jsx'
 import { ElementBadge, StatPill } from './components/Status.jsx'
@@ -22,6 +24,7 @@ export default function App() {
   const [selected, setSelected] = useState(null)
   const [showTests, setShowTests] = useState(false)
   const [showDeck, setShowDeck] = useState(false)
+  const [showCharacters, setShowCharacters] = useState(false)
 
   const tests = useMemo(() => runSelfTests(), [])
   const passedCount = tests.filter((test) => test.passed).length
@@ -212,7 +215,7 @@ export default function App() {
   }
 
   const reset = () => {
-    setState(createRun())
+    setState(createRun(state.character?.id))
     setSelected(null)
   }
 
@@ -239,8 +242,15 @@ export default function App() {
       log: [...s.log, ...logs].slice(-22),
     }
 
-    const triggered = triggerRelics(nextCombat, { type: "onCombatStart" })
-    return { ...triggered.state, log: [...triggered.state.log, ...triggered.logs].slice(-22) }
+    const passive = triggerCharacterPassive(nextCombat, { type: "onCombatStart" })
+    const triggered = triggerRelics(passive.state, { type: "onCombatStart" })
+    return { ...triggered.state, log: [...triggered.state.log, ...passive.logs, ...triggered.logs].slice(-22) }
+  }
+
+  const startCharacterRun = (characterId) => {
+    setState(createRun(characterId))
+    setSelected(null)
+    setShowCharacters(false)
   }
 
   const continueToCombat = () => {
@@ -359,11 +369,39 @@ export default function App() {
             <p className="text-sm text-slate-600">Vite 多文件版：战斗、奖励、地图、数据已拆分。</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button onClick={() => setShowCharacters((value) => !value)} variant="outline"><TinyIcon name={state.character.element} />{state.character.name}</Button>
             <Button onClick={() => setShowDeck((value) => !value)} variant="outline"><TinyIcon name="card" />卡组 {state.masterDeck.length}</Button>
             <Button onClick={() => setShowTests((value) => !value)} variant="outline"><TinyIcon name={allTestsPassed ? "check" : "fail"} />自检 {passedCount}/{tests.length}</Button>
             <Button onClick={reset} variant="outline"><TinyIcon name="reset" />重新开始</Button>
           </div>
         </header>
+
+        {showCharacters && (
+          <Panel className="p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-bold">角色选择</h2>
+                <p className="text-sm text-slate-600">选择角色会开始一局新 run。</p>
+              </div>
+              <Badge className="border-slate-300 bg-white text-slate-700">当前：{state.character.name}</Badge>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {CHARACTERS.map((character) => {
+                const meta = ELEMENTS[character.element]
+                return (
+                  <button key={character.id} type="button" onClick={() => startCharacterRun(character.id)} className={`rounded-2xl border p-4 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md ${state.character.id === character.id ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white"}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-lg font-bold">{meta.icon} {character.name}</div>
+                      <Badge className={state.character.id === character.id ? "border-white/30 bg-white/20 text-white" : meta.cls}>{meta.label}</Badge>
+                    </div>
+                    <div className="mt-2 text-sm opacity-80">生命 {character.maxHp} · 费用 {character.maxEnergy} · 初始卡组 {character.starterDeck.length}</div>
+                    <p className="mt-3 text-sm leading-relaxed opacity-80">{character.passive.description}</p>
+                  </button>
+                )
+              })}
+            </div>
+          </Panel>
+        )}
 
         <MiniMap
           phase={state.phase}
