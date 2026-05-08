@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { ICONS, ELEMENTS } from './data/constants.js'
 import { ENCOUNTERS } from './data/encounters.js'
+import { EVENT_POOL } from './data/events.js'
 import { makeInstance, shuffle } from './systems/utils.js'
 import { drawCards } from './systems/draw.js'
-import { generateRewards } from './systems/reward.js'
+import { generateChestReward, generateRewards, generateShopInventory, randomRewardCard, randomRewardRelic } from './systems/reward.js'
 import { generateMapChoices } from './systems/map.js'
 import { buildEnemy, createRun } from './systems/run.js'
 import { runSelfTests } from './systems/tests.js'
@@ -158,32 +159,53 @@ export default function App() {
 
     setState((s) => {
       const nextIndex = Math.min(choice.nextIndex, ENCOUNTERS.length - 1)
-      const healed = choice.heal ? Math.min(s.player.maxHp, s.player.hp + choice.heal) - s.player.hp : 0
-      const deck = shuffle(s.masterDeck.map(makeInstance))
       const logs = [`选择路线：${choice.label}。`]
 
-      if (healed > 0) logs.push(`休息恢复 ${healed} 点生命。`)
-      logs.push(`进入 ${ENCOUNTERS[nextIndex].floorLabel}：${ENCOUNTERS[nextIndex].name}。`)
-
-      const nextCombat = {
-        ...s,
-        phase: "combat",
-        encounterIndex: nextIndex,
-        turn: 1,
-        energy: s.maxEnergy,
-        player: { ...s.player, hp: s.player.hp + healed, block: 0 },
-        enemy: buildEnemy(nextIndex),
-        drawPile: deck.slice(5),
-        hand: deck.slice(0, 5),
-        discard: [],
-        exhausted: [],
-        mapChoices: [],
-        won: false,
-        log: [...s.log, ...logs].slice(-22),
+      if (choice.type === "rest") {
+        return {
+          ...s,
+          phase: "rest",
+          pendingNextIndex: nextIndex,
+          mapChoices: [],
+          log: [...s.log, ...logs, "抵达休息点。"].slice(-22),
+        }
       }
 
-      const triggered = triggerRelics(nextCombat, { type: "onCombatStart" })
-      return { ...triggered.state, log: [...triggered.state.log, ...triggered.logs].slice(-22) }
+      if (choice.type === "event") {
+        return {
+          ...s,
+          phase: "event",
+          currentEvent: shuffle(EVENT_POOL)[0],
+          pendingNextIndex: nextIndex,
+          mapChoices: [],
+          log: [...s.log, ...logs, "遭遇事件。"].slice(-22),
+        }
+      }
+
+      if (choice.type === "shop") {
+        return {
+          ...s,
+          phase: "shop",
+          shopInventory: generateShopInventory(),
+          pendingNextIndex: nextIndex,
+          mapChoices: [],
+          log: [...s.log, ...logs, "进入商店。"].slice(-22),
+        }
+      }
+
+      if (choice.type === "chest") {
+        return {
+          ...s,
+          phase: "chest",
+          chestReward: generateChestReward(),
+          pendingNextIndex: nextIndex,
+          mapChoices: [],
+          log: [...s.log, ...logs, "发现宝箱。"].slice(-22),
+        }
+      }
+
+      logs.push(`进入 ${ENCOUNTERS[nextIndex].floorLabel}：${ENCOUNTERS[nextIndex].name}。`)
+      return enterCombat(s, nextIndex, logs)
     })
 
     setSelected(null)
@@ -194,9 +216,131 @@ export default function App() {
     setSelected(null)
   }
 
+  const enterCombat = (s, nextIndex, logs, healed = 0) => {
+    const deck = shuffle(s.masterDeck.map(makeInstance))
+    const nextCombat = {
+      ...s,
+      phase: "combat",
+      encounterIndex: nextIndex,
+      turn: 1,
+      energy: s.maxEnergy,
+      player: { ...s.player, hp: Math.min(s.player.maxHp, s.player.hp + healed), block: 0 },
+      enemy: buildEnemy(nextIndex),
+      drawPile: deck.slice(5),
+      hand: deck.slice(0, 5),
+      discard: [],
+      exhausted: [],
+      mapChoices: [],
+      currentEvent: null,
+      pendingNextIndex: null,
+      shopInventory: null,
+      chestReward: null,
+      won: false,
+      log: [...s.log, ...logs].slice(-22),
+    }
+
+    const triggered = triggerRelics(nextCombat, { type: "onCombatStart" })
+    return { ...triggered.state, log: [...triggered.state.log, ...triggered.logs].slice(-22) }
+  }
+
+  const continueToCombat = () => {
+    setState((s) => {
+      const nextIndex = s.pendingNextIndex ?? Math.min(s.encounterIndex + 1, ENCOUNTERS.length - 1)
+      return enterCombat(s, nextIndex, [`进入 ${ENCOUNTERS[nextIndex].floorLabel}：${ENCOUNTERS[nextIndex].name}。`])
+    })
+  }
+
+  const restAndContinue = () => {
+    if (state.phase !== "rest") return
+    setState((s) => {
+      const healed = Math.min(18, s.player.maxHp - s.player.hp)
+      const nextIndex = s.pendingNextIndex ?? Math.min(s.encounterIndex + 1, ENCOUNTERS.length - 1)
+      return enterCombat(s, nextIndex, [`休息恢复 ${healed} 点生命。`, `进入 ${ENCOUNTERS[nextIndex].floorLabel}：${ENCOUNTERS[nextIndex].name}。`], healed)
+    })
+  }
+
+  const canPay = (s, cost = {}) => {
+    if ((cost.gold ?? 0) > s.gold) return false
+    if ((cost.hp ?? 0) >= s.player.hp) return false
+    if ((cost.maxHp ?? 0) >= s.player.maxHp) return false
+    return true
+  }
+
+  const chooseEventOption = (choice) => {
+    if (state.phase !== "event" || !canPay(state, choice.cost)) return
+
+    setState((s) => {
+      let player = { ...s.player }
+      let gold = s.gold - (choice.cost?.gold ?? 0)
+      const masterDeck = [...s.masterDeck]
+      const relics = [...s.relics]
+      const logs = [`事件选择：${choice.text}。`]
+
+      if (choice.cost?.hp) player.hp = Math.max(1, player.hp - choice.cost.hp)
+      if (choice.cost?.maxHp) {
+        player.maxHp = Math.max(1, player.maxHp - choice.cost.maxHp)
+        player.hp = Math.min(player.hp, player.maxHp)
+      }
+      if (choice.reward?.gold) gold += choice.reward.gold
+      if (choice.reward?.heal) player.hp = Math.min(player.maxHp, player.hp + choice.reward.heal)
+      if (choice.reward?.card) {
+        const card = randomRewardCard()
+        masterDeck.push(card)
+        logs.push(`获得卡牌：${card.name}。`)
+      }
+      if (choice.reward?.relic) {
+        const relic = randomRewardRelic()
+        relics.push(relic)
+        logs.push(`获得遗物：${relic.name}。`)
+      }
+
+      const nextIndex = s.pendingNextIndex ?? Math.min(s.encounterIndex + 1, ENCOUNTERS.length - 1)
+      return enterCombat({ ...s, player, gold, masterDeck, relics }, nextIndex, [...logs, `进入 ${ENCOUNTERS[nextIndex].floorLabel}：${ENCOUNTERS[nextIndex].name}。`])
+    })
+  }
+
+  const buyShopCard = (card) => {
+    if (state.phase !== "shop" || state.gold < card.price) return
+    setState((s) => ({
+      ...s,
+      gold: s.gold - card.price,
+      masterDeck: [...s.masterDeck, makeInstance(card)],
+      shopInventory: { ...s.shopInventory, cards: s.shopInventory.cards.filter((item) => item.uid !== card.uid) },
+      log: [...s.log, `购买卡牌：${card.name}。`].slice(-22),
+    }))
+  }
+
+  const buyShopRelic = (relic) => {
+    if (state.phase !== "shop" || state.gold < relic.price) return
+    setState((s) => ({
+      ...s,
+      gold: s.gold - relic.price,
+      relics: [...s.relics, relic],
+      shopInventory: { ...s.shopInventory, relics: s.shopInventory.relics.filter((item) => item.uid !== relic.uid) },
+      log: [...s.log, `购买遗物：${relic.name}。`].slice(-22),
+    }))
+  }
+
+  const takeChest = () => {
+    if (state.phase !== "chest" || !state.chestReward) return
+    setState((s) => {
+      const reward = s.chestReward
+      const nextIndex = s.pendingNextIndex ?? Math.min(s.encounterIndex + 1, ENCOUNTERS.length - 1)
+      return enterCombat(
+        { ...s, gold: s.gold + reward.gold, relics: [...s.relics, reward.relic] },
+        nextIndex,
+        [`打开宝箱：获得 ${reward.gold} 金币与遗物 ${reward.relic.name}。`, `进入 ${ENCOUNTERS[nextIndex].floorLabel}：${ENCOUNTERS[nextIndex].name}。`],
+      )
+    })
+  }
+
   const hint = useMemo(() => {
     if (state.phase === "reward") return "从 3 张卡里选 1 张加入卡组，或者跳过。这里开始验证构筑成长。"
     if (state.phase === "map") return "选择下一条路线：普通战斗更稳，休息能回血，精英路线更快但更危险。"
+    if (state.phase === "event") return "事件通常用资源换成长：优先看金币、生命和最大生命是否足够支付。"
+    if (state.phase === "shop") return "商店可以补关键牌或遗物；当前 Demo 不做删牌，先验证购买成长。"
+    if (state.phase === "rest") return "休息点会恢复生命，然后继续进入下一场战斗。"
+    if (state.phase === "chest") return "宝箱提供金币与遗物，是路线中的低风险成长节点。"
     if (state.phase === "complete") return "Demo 通关。下一步可以加入遗物、商店和事件节点。"
     if (!state.enemy.aura) return "先用火、水、冰、雷给敌人附着元素，再用另一种元素触发反应。"
     if (state.enemy.aura === "pyro") return "敌人有火：用水触发高倍率蒸发，或用冰触发融化。"
@@ -314,6 +458,85 @@ export default function App() {
                       <div className="mt-1 text-sm text-slate-600">{choice.heal > 0 ? `恢复 ${choice.heal} 生命，然后进入下一战。` : `进入 ${ENCOUNTERS[choice.nextIndex].name}。`}</div>
                     </button>
                   ))}
+                </div>
+              </Panel>
+            )}
+
+            {state.phase === "event" && state.currentEvent && (
+              <Panel className="p-5">
+                <div className="flex items-start gap-4">
+                  <div className="text-4xl">{state.currentEvent.icon}</div>
+                  <div>
+                    <h2 className="text-xl font-bold">{state.currentEvent.title}</h2>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-600">{state.currentEvent.description}</p>
+                  </div>
+                </div>
+                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+                  {state.currentEvent.choices.map((choice) => (
+                    <button
+                      key={choice.id}
+                      type="button"
+                      disabled={!canPay(state, choice.cost)}
+                      onClick={() => chooseEventOption(choice)}
+                      className="rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      <div className="font-bold">{choice.text}</div>
+                      <div className="mt-2 text-xs text-slate-500">
+                        {choice.cost?.gold ? `花费 ${choice.cost.gold} 金币` : choice.cost?.hp ? `失去 ${choice.cost.hp} 生命` : choice.cost?.maxHp ? `失去 ${choice.cost.maxHp} 最大生命` : "无代价"}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </Panel>
+            )}
+
+            {state.phase === "shop" && state.shopInventory && (
+              <Panel className="p-5">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-bold">商店</h2>
+                    <p className="text-sm text-slate-600">购买卡牌或遗物，然后继续前进。</p>
+                  </div>
+                  <Button onClick={continueToCombat}>离开商店</Button>
+                </div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {state.shopInventory.cards.map((card) => (
+                    <div key={card.uid} className="space-y-2">
+                      <CardView card={card} disabled={state.gold < card.price} onClick={() => buyShopCard(card)} />
+                      <Badge className="border-slate-300 bg-white text-slate-700">价格 {card.price} 金币</Badge>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {state.shopInventory.relics.map((relic) => (
+                    <button key={relic.uid} type="button" disabled={state.gold < relic.price} onClick={() => buyShopRelic(relic)} className="text-left disabled:cursor-not-allowed disabled:opacity-45">
+                      <RelicView relic={relic} />
+                      <Badge className="mt-2 border-amber-300 bg-white text-amber-900">价格 {relic.price} 金币</Badge>
+                    </button>
+                  ))}
+                </div>
+              </Panel>
+            )}
+
+            {state.phase === "rest" && (
+              <Panel className="p-8 text-center">
+                <div className="text-5xl">{ICONS.rest}</div>
+                <h2 className="mt-3 text-2xl font-bold">休息点</h2>
+                <p className="mt-2 text-slate-600">恢复最多 18 点生命，然后继续前进。</p>
+                <Button onClick={restAndContinue} className="mt-5">休息并前进</Button>
+              </Panel>
+            )}
+
+            {state.phase === "chest" && state.chestReward && (
+              <Panel className="p-8">
+                <div className="text-center">
+                  <div className="text-5xl">{ICONS.card}</div>
+                  <h2 className="mt-3 text-2xl font-bold">宝箱</h2>
+                  <p className="mt-2 text-slate-600">获得 {state.chestReward.gold} 金币与 1 件遗物。</p>
+                </div>
+                <div className="mx-auto mt-5 max-w-xl">
+                  <RelicView relic={state.chestReward.relic} />
+                  <Button onClick={takeChest} className="mt-4 w-full">领取并前进</Button>
                 </div>
               </Panel>
             )}

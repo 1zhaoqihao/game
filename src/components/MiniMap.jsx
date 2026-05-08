@@ -6,6 +6,10 @@ const PHASE_LABEL = {
   combat: "战斗中",
   reward: "奖励",
   map: "路线选择",
+  event: "事件",
+  shop: "商店",
+  rest: "休息",
+  chest: "宝箱",
   complete: "已通关",
 }
 

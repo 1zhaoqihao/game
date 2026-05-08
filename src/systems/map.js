@@ -6,10 +6,13 @@ export function generateMapChoices(encounterIndex) {
   if (next >= ENCOUNTERS.length) return []
 
   const normal = { id: "normal", label: ENCOUNTERS[next].floorLabel, type: "combat", icon: ICONS.swords, heal: 0, nextIndex: next }
+  const event = { id: "event", label: "事件", type: "event", icon: ICONS.map, heal: 0, nextIndex: next }
+  const shop = { id: "shop", label: "商店", type: "shop", icon: ICONS.gold, heal: 0, nextIndex: next }
+  const chest = { id: "chest", label: "宝箱", type: "chest", icon: ICONS.card, heal: 0, nextIndex: next }
   const rest = { id: "rest", label: "休息后前进", type: "rest", icon: ICONS.rest, heal: 14, nextIndex: next }
   const elite = { id: "elite", label: next === 2 ? "挑战精英" : "强敌路线", type: "elite", icon: ICONS.elite, heal: 0, nextIndex: Math.min(next + 1, ENCOUNTERS.length - 1) }
 
-  if (encounterIndex === 0) return [normal, rest]
-  if (encounterIndex === 1) return [normal, elite, rest]
-  return [normal]
+  if (encounterIndex === 0) return [normal, event, rest]
+  if (encounterIndex === 1) return [normal, elite, shop, rest]
+  return [normal, chest]
 }

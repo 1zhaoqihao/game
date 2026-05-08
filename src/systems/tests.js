@@ -1,6 +1,6 @@
 import { reaction } from './reaction.js'
 import { drawCards } from './draw.js'
-import { generateRewards } from './reward.js'
+import { generateChestReward, generateRewards, generateShopInventory } from './reward.js'
 import { generateMapChoices } from './map.js'
 import { triggerRelics } from './relics.js'
 import { getCardEffects, resolveCardEffects } from './effects.js'
@@ -35,6 +35,15 @@ export function runSelfTests() {
   add("战斗奖励金币为正数", rewards.gold > 0)
   add("战斗奖励会生成 1 件遗物", Boolean(rewards.relic?.id))
   add("地图分支至少提供 1 个下一步选择", generateMapChoices(0).length >= 1)
+  add("地图会提供事件节点", generateMapChoices(0).some((choice) => choice.type === "event"))
+  add("地图会提供商店节点", generateMapChoices(1).some((choice) => choice.type === "shop"))
+  add("地图会提供宝箱节点", generateMapChoices(2).some((choice) => choice.type === "chest"))
+
+  const shop = generateShopInventory()
+  add("商店生成卡牌和遗物库存", shop.cards.length === 4 && shop.relics.length === 2 && shop.cards.every((card) => card.price > 0))
+
+  const chest = generateChestReward()
+  add("宝箱生成金币和遗物", chest.gold > 0 && Boolean(chest.relic?.id))
 
   const relicState = {
     maxEnergy: 3,
