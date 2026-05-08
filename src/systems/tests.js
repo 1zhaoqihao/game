@@ -168,5 +168,11 @@ export function runSelfTests() {
   const summonTick = triggerSummons(summonedState.state)
   add("召唤物会造成伤害并减少持续回合", summonTick.state.enemy.hp === 15 && summonTick.state.summons[0].turns === 2)
 
+  const expiredSummon = triggerSummons({
+    ...summonedState.state,
+    summons: [{ ...summonedState.state.summons[0], turns: 1 }],
+  })
+  add("召唤物持续回合结束后会移除", expiredSummon.state.summons.length === 0)
+
   return tests
 }

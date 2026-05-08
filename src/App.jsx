@@ -31,7 +31,7 @@ export default function App() {
   const [showCharacters, setShowCharacters] = useState(false)
   const [hasSave, setHasSave] = useState(() => hasSavedRun())
 
-  const tests = useMemo(() => runSelfTests(), [])
+  const tests = runSelfTests()
   const passedCount = tests.filter((test) => test.passed).length
   const allTestsPassed = tests.every((test) => test.passed)
   const enemyHpPct = Math.max(0, Math.min(100, (state.enemy.hp / state.enemy.maxHp) * 100))
