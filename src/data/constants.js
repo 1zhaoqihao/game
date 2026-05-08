@@ -1,0 +1,32 @@
+export const ICONS = {
+  pyro: "🔥",
+  hydro: "💧",
+  cryo: "❄️",
+  electro: "⚡",
+  anemo: "🌪️",
+  geo: "🪨",
+  physical: "⚔️",
+  shield: "🛡️",
+  heart: "❤️",
+  swords: "⚔️",
+  reset: "↻",
+  energy: "✨",
+  check: "✅",
+  fail: "❌",
+  card: "🃏",
+  map: "🗺️",
+  gold: "🪙",
+  boss: "👹",
+  elite: "💀",
+  rest: "⛺",
+}
+
+export const ELEMENTS = {
+  pyro: { label: "火", icon: ICONS.pyro, cls: "bg-red-100 text-red-700 border-red-200" },
+  hydro: { label: "水", icon: ICONS.hydro, cls: "bg-blue-100 text-blue-700 border-blue-200" },
+  cryo: { label: "冰", icon: ICONS.cryo, cls: "bg-cyan-100 text-cyan-700 border-cyan-200" },
+  electro: { label: "雷", icon: ICONS.electro, cls: "bg-purple-100 text-purple-700 border-purple-200" },
+  anemo: { label: "风", icon: ICONS.anemo, cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  geo: { label: "岩", icon: ICONS.geo, cls: "bg-amber-100 text-amber-700 border-amber-200" },
+  physical: { label: "物", icon: ICONS.physical, cls: "bg-stone-100 text-stone-700 border-stone-200" },
+}
