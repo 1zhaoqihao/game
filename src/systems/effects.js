@@ -83,9 +83,13 @@ function applyDamageEffect(state, effect, card, logs) {
     if (enemy.hp <= 0) break
 
     const reactionResult = reaction(enemy.aura, element)
-    const dmg = Math.round(effect.amount * reactionResult.multiplier + reactionResult.bonusDamage)
+    const rawDamage = Math.round(effect.amount * reactionResult.multiplier + reactionResult.bonusDamage)
+    const blocked = Math.min(enemy.block ?? 0, rawDamage)
+    const dmg = rawDamage - blocked
+    enemy.block = Math.max(0, (enemy.block ?? 0) - blocked)
     enemy.hp = Math.max(0, enemy.hp - dmg)
     logs.push(`造成 ${dmg} 点${ELEMENTS[element]?.label ?? ""}伤害。`)
+    if (blocked > 0) logs.push(`敌人护盾抵消 ${blocked} 点伤害。`)
     if (reactionResult.name) logs.push(`触发元素反应：${reactionResult.name}！`)
 
     if (reactionResult.status === "frozen") {

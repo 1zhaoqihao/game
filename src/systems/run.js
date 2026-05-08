@@ -3,6 +3,7 @@ import { ENCOUNTERS } from '../data/encounters.js'
 import { STARTER_RELICS } from '../data/relics.js'
 import { shuffle, makeInstance } from './utils.js'
 import { relicInstance, triggerRelics } from './relics.js'
+import { chooseEnemyIntent } from './intent.js'
 
 export function buildEnemy(index) {
   const encounter = ENCOUNTERS[Math.min(index, ENCOUNTERS.length - 1)]
@@ -13,7 +14,7 @@ export function buildEnemy(index) {
     block: 0,
     aura: null,
     frozen: 0,
-    intent: { type: "attack", value: encounter.attack },
+    intent: chooseEnemyIntent(index, 1),
   }
 }
 

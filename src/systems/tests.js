@@ -4,6 +4,7 @@ import { generateRewards } from './reward.js'
 import { generateMapChoices } from './map.js'
 import { triggerRelics } from './relics.js'
 import { getCardEffects, resolveCardEffects } from './effects.js'
+import { chooseEnemyIntent, resolveEnemyIntent } from './intent.js'
 
 export function runSelfTests() {
   const tests = []
@@ -75,6 +76,27 @@ export function runSelfTests() {
   }
   const resolved = resolveCardEffects(effectState, effectCard)
   add("数据驱动 effects 卡牌可直接结算", resolved.state.player.block === 2 && resolved.state.enemy.hp === 10)
+
+  add("敌人意图会按回合轮换", chooseEnemyIntent(0, 2).type === "block")
+
+  const enemyAction = resolveEnemyIntent({
+    player: { hp: 20, maxHp: 20, block: 3 },
+    enemy: { block: 0, frozen: 0, intent: { type: "attack_block", value: 8, block: 5 } },
+  })
+  add("敌人攻防混合意图可结算", enemyAction.state.player.hp === 15 && enemyAction.state.enemy.block === 5)
+
+  const blockedDamage = resolveCardEffects({
+    maxEnergy: 3,
+    energy: 2,
+    player: { hp: 20, maxHp: 20, block: 0 },
+    enemy: { hp: 20, maxHp: 20, block: 4, aura: null, frozen: 0 },
+    hand: [],
+    drawPile: [],
+    discard: [],
+    log: [],
+    relics: [],
+  }, { id: "block_test", name: "破盾测试", cost: 1, element: "physical", effects: [{ type: "deal_damage", amount: 6, element: "physical" }] })
+  add("敌人护盾会抵消玩家伤害", blockedDamage.state.enemy.hp === 18 && blockedDamage.state.enemy.block === 0)
 
   return tests
 }

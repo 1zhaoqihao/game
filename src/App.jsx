@@ -9,6 +9,7 @@ import { buildEnemy, createRun } from './systems/run.js'
 import { runSelfTests } from './systems/tests.js'
 import { triggerRelics } from './systems/relics.js'
 import { resolveCardEffects } from './systems/effects.js'
+import { chooseEnemyIntent, describeIntent, resolveEnemyIntent } from './systems/intent.js'
 import { Button, Panel, Badge, TinyIcon } from './components/ui.jsx'
 import { CardView } from './components/CardView.jsx'
 import { ElementBadge, StatPill } from './components/Status.jsx'
@@ -83,21 +84,11 @@ export default function App() {
     if (state.phase !== "combat" || state.won || state.lost) return
 
     setState((s) => {
-      let player = { ...s.player }
-      let enemy = { ...s.enemy }
       const logs = ["玩家结束回合。"]
-
-      if (enemy.frozen > 0) {
-        enemy.frozen -= 1
-        logs.push("敌人被冻结，跳过行动。")
-      } else {
-        const raw = enemy.intent.value
-        const absorbed = Math.min(player.block, raw)
-        player.block -= absorbed
-        const taken = raw - absorbed
-        player.hp = Math.max(0, player.hp - taken)
-        logs.push(`敌人攻击 ${raw} 点，护盾抵消 ${absorbed}，受到 ${taken} 点伤害。`)
-      }
+      const resolvedIntent = resolveEnemyIntent(s)
+      let player = { ...resolvedIntent.state.player }
+      let enemy = { ...resolvedIntent.state.enemy }
+      logs.push(...resolvedIntent.logs)
 
       const lost = player.hp <= 0
       if (lost) logs.push("失败：需要更多防御、冻结或爆发构筑。")
@@ -107,7 +98,7 @@ export default function App() {
         turn: s.turn + 1,
         energy: s.maxEnergy,
         player: { ...player, block: 0 },
-        enemy,
+        enemy: { ...enemy, intent: chooseEnemyIntent(s.encounterIndex, s.turn + 1) },
         hand: [],
         discard: [...s.discard, ...s.hand],
         lost,
@@ -349,11 +340,11 @@ export default function App() {
                       <div className="h-4 w-72 max-w-full overflow-hidden rounded-full bg-slate-200">
                         <div className="h-full bg-slate-800 transition-all" style={{ width: `${enemyHpPct}%` }} />
                       </div>
-                      <div className="text-sm text-slate-600">HP {state.enemy.hp}/{state.enemy.maxHp}</div>
+                      <div className="text-sm text-slate-600">HP {state.enemy.hp}/{state.enemy.maxHp} · 护盾 {state.enemy.block}</div>
                     </div>
                     <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">
                       <div className="text-xs text-slate-500">敌人意图</div>
-                      <div className="mt-1 flex items-center justify-center gap-2 text-lg font-bold"><TinyIcon name="swords" />攻击 {state.enemy.intent.value}</div>
+                      <div className="mt-1 flex items-center justify-center gap-2 text-lg font-bold"><TinyIcon name={state.enemy.intent.type === "block" ? "shield" : "swords"} />{describeIntent(state.enemy.intent)}</div>
                     </div>
                   </div>
                 </Panel>
