@@ -3,6 +3,7 @@ import { drawCards } from './draw.js'
 import { generateRewards } from './reward.js'
 import { generateMapChoices } from './map.js'
 import { triggerRelics } from './relics.js'
+import { getCardEffects, resolveCardEffects } from './effects.js'
 
 export function runSelfTests() {
   const tests = []
@@ -47,6 +48,33 @@ export function runSelfTests() {
   }
   const triggered = triggerRelics(relicState, { type: "onReaction", reaction: "蒸发" })
   add("遗物可响应元素反应触发", triggered.state.energy === 2 && triggered.logs.length === 1)
+
+  const legacyEffects = getCardEffects({ damage: 6, block: 3, element: "pyro", apply: "pyro" })
+  add("旧卡牌字段可转换为效果列表", legacyEffects.some((effect) => effect.type === "gain_block") && legacyEffects.some((effect) => effect.type === "deal_damage"))
+
+  const effectCard = {
+    id: "effect_test",
+    name: "效果测试",
+    cost: 1,
+    element: "hydro",
+    effects: [
+      { type: "gain_block", amount: 2 },
+      { type: "deal_damage", amount: 5, element: "hydro", apply: "hydro" },
+    ],
+  }
+  const effectState = {
+    maxEnergy: 3,
+    energy: 2,
+    player: { hp: 20, maxHp: 20, block: 0 },
+    enemy: { hp: 20, maxHp: 20, aura: "pyro", frozen: 0 },
+    hand: [],
+    drawPile: [],
+    discard: [],
+    log: [],
+    relics: [],
+  }
+  const resolved = resolveCardEffects(effectState, effectCard)
+  add("数据驱动 effects 卡牌可直接结算", resolved.state.player.block === 2 && resolved.state.enemy.hp === 10)
 
   return tests
 }

@@ -2,13 +2,13 @@ import { useMemo, useState } from 'react'
 import { ICONS, ELEMENTS } from './data/constants.js'
 import { ENCOUNTERS } from './data/encounters.js'
 import { makeInstance, shuffle } from './systems/utils.js'
-import { reaction } from './systems/reaction.js'
 import { drawCards } from './systems/draw.js'
 import { generateRewards } from './systems/reward.js'
 import { generateMapChoices } from './systems/map.js'
 import { buildEnemy, createRun } from './systems/run.js'
 import { runSelfTests } from './systems/tests.js'
 import { triggerRelics } from './systems/relics.js'
+import { resolveCardEffects } from './systems/effects.js'
 import { Button, Panel, Badge, TinyIcon } from './components/ui.jsx'
 import { CardView } from './components/CardView.jsx'
 import { ElementBadge, StatPill } from './components/Status.jsx'
@@ -33,65 +33,12 @@ export default function App() {
 
     setState((s) => {
       let next = { ...s, energy: s.energy - card.cost }
+      const logs = [`打出「${card.name}」。`]
+      const resolved = resolveCardEffects(next, card)
+      next = resolved.state
+      logs.push(...resolved.logs)
       let enemy = { ...next.enemy }
       let player = { ...next.player }
-      const logs = [`打出「${card.name}」。`]
-
-      if (card.block) {
-        player.block += card.block
-        logs.push(`获得 ${card.block} 点护盾。`)
-      }
-
-      if (card.heal) {
-        const before = player.hp
-        player.hp = Math.min(player.maxHp, player.hp + card.heal)
-        logs.push(`恢复 ${player.hp - before} 点生命。`)
-      }
-
-      if (card.draw) {
-        next = drawCards(next, card.draw)
-        logs.push(`抽 ${card.draw} 张牌。`)
-      }
-
-      if (card.damage) {
-        const hitCount = card.hits || 1
-        for (let hit = 0; hit < hitCount; hit += 1) {
-          if (enemy.hp <= 0) break
-
-          const r = reaction(enemy.aura, card.element)
-          const dmg = Math.round(card.damage * r.multiplier + r.bonusDamage)
-          enemy.hp = Math.max(0, enemy.hp - dmg)
-
-          logs.push(`造成 ${dmg} 点${ELEMENTS[card.element]?.label ?? ""}伤害。`)
-          if (r.name) logs.push(`触发元素反应：${r.name}！`)
-
-          if (r.status === "frozen") {
-            enemy.frozen = 1
-            logs.push("敌人被冻结，下回合无法行动。")
-          }
-
-          if (card.apply && card.element !== "anemo" && card.element !== "geo") {
-            enemy.aura = r.consume ? null : card.apply
-            if (!r.consume) logs.push(`敌人附着 ${ELEMENTS[card.apply].label} 元素。`)
-          } else if (card.apply === "anemo" && !r.name) {
-            logs.push("风元素未找到可扩散元素。")
-          }
-
-          if (r.consume && card.apply && card.element !== "anemo" && card.element !== "geo" && enemy.hp > 0) {
-            enemy.aura = card.apply
-            logs.push(`反应后重新附着 ${ELEMENTS[card.apply].label} 元素。`)
-          }
-
-          if (r.name) {
-            next = { ...next, player, enemy }
-            const triggered = triggerRelics(next, { type: "onReaction", reaction: r.name, card, enemyAura: enemy.aura })
-            next = triggered.state
-            player = { ...next.player }
-            enemy = { ...next.enemy }
-            logs.push(...triggered.logs)
-          }
-        }
-      }
 
       const hand = next.hand.filter((item) => item.uid !== card.uid)
       const discard = [...next.discard, card]
